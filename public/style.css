@@ -278,6 +278,7 @@ body {
 }
 .feedback-msg.correct { background: #1a4a1a; color: var(--accent); }
 .feedback-msg.wrong   { background: #3a1a1a; color: var(--danger); }
+.feedback-msg.close   { background: #3a2e00; color: #ffd700; }
 .feedback-msg.info    { background: var(--bg3); color: var(--text-muted); }
 
 /* ── Sidebar ── */

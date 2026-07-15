@@ -163,8 +163,12 @@ function initSocket() {
     addChatSystem(`✅ ${username} kitalálta! (+${points} pont)`);
   });
 
-  state.socket.on('wrong_guess', () => {
-    setFeedback('❌ Nem ez! Próbáld újra.', 'wrong');
+  state.socket.on('wrong_guess', ({ guess, closeHint }) => {
+    if (closeHint) {
+      setFeedback(`❌ Nem ez! ${closeHint}`, 'close');
+    } else {
+      setFeedback('❌ Nem ez! Próbáld újra.', 'wrong');
+    }
   });
 
   state.socket.on('player_guessed', ({ username, guess }) => {

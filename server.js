@@ -309,7 +309,13 @@ io.on('connection', (socket) => {
         setTimeout(() => nextRound(room), 3000);
       }
     } else {
-      socket.emit('wrong_guess', { guess });
+      const closeHint = getCloseHint(guess, room.currentGame.name);
+      if (closeHint) {
+        // Csak ennek a játékosnak küldjük – senki más nem látja
+        socket.emit('wrong_guess', { guess, closeHint });
+      } else {
+        socket.emit('wrong_guess', { guess });
+      }
       io.to(room.id).emit('player_guessed', {
         username: player.username,
         guess: '❌ Rossz tipp'
@@ -444,6 +450,64 @@ function endGame(room) {
       io.to(room.id).emit('room_reset', { room: sanitizeRoom(room) });
     }
   }, 30000);
+}
+
+// ─── Levenshtein távolság ─────────────────────────────────────────────────────
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Közel-e a tipp? → privát szöveges hint generálása
+function getCloseHint(guess, answer) {
+  const g = guess.trim().toLowerCase();
+  const a = answer.toLowerCase();
+
+  // Pontos egyezés – ezt a caller kezeli
+  if (g === a) return null;
+
+  const dist = levenshtein(g, a);
+  const threshold = Math.max(3, Math.floor(a.length * 0.35)); // max 35% eltérés
+
+  if (dist > threshold) return null; // túl messze, nincs hint
+
+  const hints = [];
+
+  // Hossz különbség
+  if (g.length < a.length) {
+    hints.push(`📏 A válasz hosszabb (${a.length} karakter)`);
+  } else if (g.length > a.length) {
+    hints.push(`📏 A válasz rövidebb (${a.length} karakter)`);
+  }
+
+  // Első karakter
+  if (g[0] !== a[0]) {
+    hints.push(`🔤 Nem jó betűvel kezdődik (nem "${g[0].toUpperCase()}")`);
+  }
+
+  // Tartalmazza-e részben
+  if (a.includes(g) || g.includes(a.split(' ')[0])) {
+    hints.push(`🔍 Nagyon közel vagy, pontosíts!`);
+  }
+
+  // Elírás / közel
+  if (dist <= 2) {
+    hints.push(`✏️ Csak ${dist} karakter a különbség, elírás?`);
+  } else if (dist <= threshold) {
+    hints.push(`🤏 Közel vagy, de nem pontos!`);
+  }
+
+  return hints.length > 0 ? hints[0] : `🤏 Majdnem! Próbáld újra.`;
 }
 
 // Szoba adatainak tisztítása (Set-ek nem JSON-ba serializálhatók)
