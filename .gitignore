@@ -1,0 +1,15 @@
+# Függőségek
+node_modules/
+
+# Környezeti változók - SOHA ne töltsd fel!
+.env
+.env.local
+.env.production
+
+# Logok
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

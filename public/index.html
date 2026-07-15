@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎮 Game Guesser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <div class="nav-logo">🎮 Game Guesser</div>
+    <div class="nav-user" id="navUser">
+      <button class="btn btn-kick" id="loginBtn" onclick="kickLogin()">
+        <img src="https://kick.com/favicon.ico" width="18" height="18" alt="Kick" />
+        Bejelentkezés Kick-kel
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── FŐOLDAL (lobby) ── -->
+  <div id="homePage" class="page active">
+    <div class="hero">
+      <h1>🎮 Game Guesser</h1>
+      <p class="hero-sub">Találd ki a játék nevét tippekből – versenyezz barátaiddal!</p>
+
+      <div class="home-cards">
+        <div class="card">
+          <h2>➕ Szoba létrehozása</h2>
+          <p>Hívd meg barátaidat és játsszatok együtt!</p>
+          <button class="btn btn-primary" onclick="createRoom()">Szoba létrehozása</button>
+        </div>
+        <div class="card">
+          <h2>🔗 Csatlakozás szobához</h2>
+          <p>Add meg a szoba kódját a csatlakozáshoz.</p>
+          <input class="input" id="joinCodeInput" placeholder="pl. A3F9B2" maxlength="6" />
+          <button class="btn btn-secondary" onclick="joinRoom()">Csatlakozás</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LOBBY OLDAL ── -->
+  <div id="lobbyPage" class="page">
+    <div class="lobby-container">
+      <div class="lobby-header">
+        <h2>🚪 Szoba: <span id="roomCodeDisplay"></span></h2>
+        <button class="btn btn-outline" onclick="copyInvite()">📋 Meghívó másolása</button>
+      </div>
+      <div id="playerList" class="player-list"></div>
+      <div class="lobby-actions">
+        <button class="btn btn-primary" id="readyBtn" onclick="toggleReady()">✅ Kész vagyok</button>
+        <p class="lobby-hint">Minden játékosnak késznek kell lennie a kezdéshez.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JÁTÉK OLDAL ── -->
+  <div id="gamePage" class="page">
+    <div class="game-layout">
+
+      <!-- Bal: játék terület -->
+      <div class="game-main">
+        <div class="game-header">
+          <span id="roundDisplay">1 / 5. kör</span>
+          <span id="timerDisplay" class="timer"></span>
+        </div>
+
+        <div class="hints-box" id="hintsBox">
+          <h3>💡 Tippek</h3>
+          <ul id="hintList"></ul>
+        </div>
+
+        <div class="guess-area">
+          <input class="input guess-input" id="guessInput" placeholder="Írd be a játék nevét..." />
+          <button class="btn btn-primary" onclick="submitGuess()">Tipp!</button>
+        </div>
+
+        <div id="feedbackMsg" class="feedback-msg"></div>
+      </div>
+
+      <!-- Jobb: ranglista + chat -->
+      <div class="game-sidebar">
+        <div class="scoreboard" id="scoreboard">
+          <h3>🏆 Ranglista</h3>
+          <ul id="scoreList"></ul>
+        </div>
+
+        <div class="chat-box">
+          <h3>💬 Chat</h3>
+          <div id="chatMessages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input class="input" id="chatInput" placeholder="Üzenet..." maxlength="200" />
+            <button class="btn btn-secondary" onclick="sendChat()">➤</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── JÁTÉK VÉGE OLDAL ── -->
+  <div id="gameOverPage" class="page">
+    <div class="gameover-container">
+      <h1 id="winnerText">🏆 Győztes!</h1>
+      <ul id="finalLeaderboard" class="final-leaderboard"></ul>
+      <button class="btn btn-primary" onclick="backToLobby()">🔄 Vissza a lobbiba</button>
+    </div>
+  </div>
+
+  <!-- ── TOAST ── -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
