@@ -141,14 +141,15 @@ function initSocket() {
     state.currentRound = round;
     state.guessedThisRound = false;
     clearHints();
+    document.getElementById('answerOverlay').classList.remove('show');
     document.getElementById('roundDisplay').textContent = `${round} / ${maxRounds}. kör`;
     document.getElementById('guessInput').disabled = false;
     document.getElementById('guessInput').value = '';
     setFeedback('', '');
     addHint(hint, hintIndex, totalHints);
-    setGameImage(imageUrl, 24);   // teljes blur-rel indul
+    setGameImage(imageUrl, 24);
     startTimer(duration);
-    startBlurTimer(duration);     // időalapú blur csökkentés
+    startBlurTimer(duration);
     addChatSystem(`🎯 ${round}. kör kezdődik!`);
   });
 
@@ -163,6 +164,7 @@ function initSocket() {
       document.getElementById('guessInput').disabled = true;
       setFeedback(`🎉 Helyes! +${points} pont`, 'correct');
       stopTimer();
+      showAnswerOverlay(answer, points);
     }
     // Ha mindenki kitalálta, a kép élesre vált
     if (room.players.every(p => p.score > 0 || playerId === p.id)) {
@@ -193,10 +195,11 @@ function initSocket() {
   state.socket.on('round_timeout', ({ answer, room }) => {
     document.getElementById('guessInput').disabled = true;
     stopTimer();
-    updateImageBlur(0);   // kör végén teljesen éles lesz
+    updateImageBlur(0);
     setFeedback(`⏰ Idő lejárt! A válasz: ${answer}`, 'info');
     updateScoreboard(room.players);
     addChatSystem(`⏰ A helyes válasz: ${answer}`);
+    showAnswerOverlay(answer, null); // null = nem szerzett pontot
   });
 
   state.socket.on('next_round_countdown', ({ seconds }) => {
@@ -502,6 +505,33 @@ function updateImageBlur(blurPx) {
   if (img && img.style.display !== 'none') {
     img.style.filter = `blur(${blurPx}px)`;
   }
+}
+
+// ── Helyes válasz overlay ─────────────────────────────────────────────────────
+let overlayTimeout = null;
+
+function showAnswerOverlay(answer, points) {
+  const overlay  = document.getElementById('answerOverlay');
+  const nameEl   = document.getElementById('overlayAnswerName');
+  const pointsEl = document.getElementById('overlayPoints');
+
+  nameEl.textContent = answer;
+
+  if (points !== null && points !== undefined) {
+    pointsEl.textContent = `+${points} pont 🏆`;
+    pointsEl.style.color = '#ffd700';
+  } else {
+    pointsEl.textContent = '⏰ Nem sikerült – 0 pont';
+    pointsEl.style.color = 'var(--danger)';
+  }
+
+  overlay.classList.add('show');
+
+  // 3 másodperc után automatikusan eltűnik
+  clearTimeout(overlayTimeout);
+  overlayTimeout = setTimeout(() => {
+    overlay.classList.remove('show');
+  }, 3000);
 }
 
 // ── Visszaszámláló timer ──────────────────────────────────────────────────────

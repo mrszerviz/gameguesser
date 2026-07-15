@@ -417,6 +417,59 @@ body {
 .toast.error { border-color: var(--danger); color: var(--danger); }
 
 
+/* ── Answer overlay ── */
+.answer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 150;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.answer-overlay.show {
+  display: flex;
+  animation: overlayIn 0.3s ease;
+}
+@keyframes overlayIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.answer-overlay-inner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+}
+.answer-label {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.answer-name {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 900;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(83, 252, 24, 0.5);
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  line-height: 1.1;
+}
+.answer-points {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+  animation: popIn 0.4s 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* ── Modal ── */
 .modal-overlay {
   display: none;
