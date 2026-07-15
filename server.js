@@ -1,12 +1,12 @@
 require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const session = require('express-session');
-const passport = require('passport');
-const OAuth2Strategy = require('passport-oauth2');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const path = require('path');
 
 const app = express();
@@ -14,6 +14,22 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+
+// ─── Kick OAuth konstansok ────────────────────────────────────────────────────
+const KICK_AUTH_URL  = 'https://id.kick.com/oauth/authorize';
+const KICK_TOKEN_URL = 'https://id.kick.com/oauth/token';
+const KICK_USERS_URL = 'https://api.kick.com/public/v1/users';
+
+// ─── PKCE segédfüggvények ─────────────────────────────────────────────────────
+function generateCodeVerifier() {
+  return crypto.randomBytes(64).toString('base64url');
+}
+function generateCodeChallenge(verifier) {
+  return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+function generateState() {
+  return crypto.randomBytes(16).toString('hex');
+}
 
 // ─── Játékok listája (RAWG slug a képekhez) ───────────────────────────────────
 const GAMES = [
@@ -92,78 +108,89 @@ app.use(session({
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-app.use(passport.initialize());
-app.use(passport.session());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Passport sorozatosítás ───────────────────────────────────────────────────
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
+// ─── Auth routes (kézi PKCE, passport nélkül) ────────────────────────────────
+app.get('/auth/kick', (req, res) => {
+  const state        = generateState();
+  const codeVerifier = generateCodeVerifier();
+  const challenge    = generateCodeChallenge(codeVerifier);
 
-// ─── Kick OAuth2 stratégia ────────────────────────────────────────────────────
-passport.use('kick', new OAuth2Strategy({
-  authorizationURL: 'https://id.kick.com/oauth/authorize',
-  tokenURL: 'https://id.kick.com/oauth/token',
-  clientID: process.env.KICK_CLIENT_ID,
-  clientSecret: process.env.KICK_CLIENT_SECRET,
-  callbackURL: process.env.KICK_REDIRECT_URI,
-  scope: 'user:read',
-  scopeSeparator: ' ',
-  state: true,
-  pkce: true,
-},
-async (accessToken, refreshToken, params, profile, done) => {
+  req.session.oauthState        = state;
+  req.session.oauthCodeVerifier = codeVerifier;
+
+  const params = new URLSearchParams({
+    response_type:          'code',
+    client_id:              process.env.KICK_CLIENT_ID,
+    redirect_uri:           process.env.KICK_REDIRECT_URI,
+    scope:                  'user:read',
+    state,
+    code_challenge:         challenge,
+    code_challenge_method:  'S256',
+  });
+
+  res.redirect(`${KICK_AUTH_URL}?${params}`);
+});
+
+app.get('/auth/kick/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+
+  if (error) {
+    console.error('Kick OAuth hiba:', error);
+    return res.redirect('/?error=' + encodeURIComponent(error));
+  }
+  if (!code || state !== req.session.oauthState) {
+    return res.redirect('/?error=state_mismatch');
+  }
+
+  const codeVerifier = req.session.oauthCodeVerifier;
+  delete req.session.oauthState;
+  delete req.session.oauthCodeVerifier;
+
   try {
-    const response = await axios.get('https://api.kick.com/public/v1/user', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
+    // Token csere
+    const tokenRes = await axios.post(KICK_TOKEN_URL,
+      new URLSearchParams({
+        grant_type:    'authorization_code',
+        client_id:     process.env.KICK_CLIENT_ID,
+        client_secret: process.env.KICK_CLIENT_SECRET,
+        redirect_uri:  process.env.KICK_REDIRECT_URI,
+        code,
+        code_verifier: codeVerifier,
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+
+    // Felhasználó adatai
+    const userRes = await axios.get(KICK_USERS_URL, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
     });
-    const data = response.data?.data || response.data;
-    const user = {
-      id: data.user_id || data.id,
+
+    const data = userRes.data?.data?.[0] || userRes.data?.[0] || userRes.data;
+    req.session.user = {
+      id:       data.user_id || data.id,
       username: data.username || data.name || 'Kick User',
-      avatar: data.profile_pic || data.avatar || null,
+      avatar:   data.profile_pic || data.avatar || null,
     };
-    console.log('Kick bejelentkezés sikeres:', user.username);
-    return done(null, user);
+
+    console.log('Kick bejelentkezés sikeres:', req.session.user.username);
+    res.redirect('/');
   } catch (err) {
-    console.error('Kick API hiba:', err.response?.data || err.message);
-    // API hiba esetén fallback – legalább be van jelentkezve
-    return done(null, { id: 'unknown', username: 'Kick User', avatar: null });
+    console.error('Kick token/user hiba:', err.response?.data || err.message);
+    res.redirect('/?error=' + encodeURIComponent(err.response?.data?.message || 'token_failed'));
   }
-}));
-
-// ─── Auth routes ──────────────────────────────────────────────────────────────
-app.get('/auth/kick', passport.authenticate('kick'));
-
-app.get('/auth/kick/callback',
-  (req, res, next) => {
-    passport.authenticate('kick', (err, user) => {
-      if (err) {
-        console.error('OAuth hiba:', err);
-        return res.redirect('/?error=' + encodeURIComponent(err.message || 'auth_failed'));
-      }
-      if (!user) {
-        return res.redirect('/?error=no_user');
-      }
-      req.logIn(user, (loginErr) => {
-        if (loginErr) return res.redirect('/?error=login_failed');
-        return res.redirect('/');
-      });
-    })(req, res, next);
-  }
-);
+});
 
 app.get('/auth/logout', (req, res) => {
-  req.logout(() => res.redirect('/'));
+  req.session.destroy(() => res.redirect('/'));
 });
 
 app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json({ loggedIn: true, user: req.user });
+  if (req.session.user) {
+    res.json({ loggedIn: true, user: req.session.user });
   } else {
     res.json({ loggedIn: false });
   }
