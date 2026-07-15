@@ -170,12 +170,17 @@ function initSocket() {
     addChatSystem(`✅ ${username} kitalálta! (+${points} pont)`);
   });
 
-  state.socket.on('wrong_guess', ({ guess, closeHint }) => {
+  state.socket.on('wrong_guess', ({ guess, closeHint, penalty }) => {
+    const penaltyTxt = penalty ? ` (-${penalty} pont)` : '';
     if (closeHint) {
-      setFeedback(`❌ Nem ez! ${closeHint}`, 'close');
+      setFeedback(`❌ Nem ez!${penaltyTxt} ${closeHint}`, 'close');
     } else {
-      setFeedback('❌ Nem ez! Próbáld újra.', 'wrong');
+      setFeedback(`❌ Nem ez!${penaltyTxt} Próbáld újra.`, 'wrong');
     }
+  });
+
+  state.socket.on('score_updated', ({ room }) => {
+    updateScoreboard(room.players);
   });
 
   state.socket.on('player_guessed', ({ username, guess }) => {

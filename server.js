@@ -292,11 +292,14 @@ io.on('connection', (socket) => {
     if (correct) {
       room.guessedThisRound.add(socket.id);
 
-      // Időalapú pontozás: 0-30mp között 100→10 pont
-      const elapsed = (Date.now() - room.roundStartTime) / 1000; // másodpercben
+      // Pontozás: 2000 alap - eltelt idő arányosan, +100 bónusz ha első tippre
+      const elapsed = (Date.now() - room.roundStartTime) / 1000;
       const duration = room.roundDuration;
-      const ratio = Math.max(0, 1 - elapsed / duration);         // 1.0 → 0.0
-      const points = Math.round(10 + ratio * 90);                 // 100→10 pont
+      const ratio = Math.max(0, 1 - elapsed / duration);           // 1.0 → 0.0
+      const base = Math.round(2000 * ratio);                        // 2000 → 0
+      const bonus = room.guessedThisRound.size === 1 &&
+                    player.wrongGuesses === 0 ? 100 : 0;            // első helyes tipp bónusz
+      const points = Math.max(base, 50) + bonus;                    // minimum 50 pont
       player.score += points;
 
       io.to(room.id).emit('correct_guess', {
@@ -313,17 +316,21 @@ io.on('connection', (socket) => {
         setTimeout(() => nextRound(room), 3000);
       }
     } else {
+      // Rossz tipp: -400 pont (minimum 0)
+      player.wrongGuesses = (player.wrongGuesses || 0) + 1;
+      player.score = Math.max(0, (player.score || 0) - 400);
+
       const closeHint = getCloseHint(guess, room.currentGame.name);
       if (closeHint) {
-        // Csak ennek a játékosnak küldjük – senki más nem látja
-        socket.emit('wrong_guess', { guess, closeHint });
+        socket.emit('wrong_guess', { guess, closeHint, penalty: 400 });
       } else {
-        socket.emit('wrong_guess', { guess });
+        socket.emit('wrong_guess', { guess, penalty: 400 });
       }
       io.to(room.id).emit('player_guessed', {
         username: player.username,
-        guess: '❌ Rossz tipp'
+        guess: '❌ Rossz tipp (-400 pont)'
       });
+      io.to(room.id).emit('score_updated', { room: sanitizeRoom(room) });
     }
   });
 
@@ -371,7 +378,7 @@ io.on('connection', (socket) => {
 function startGame(room) {
   room.state = 'playing';
   room.round = 0;
-  room.players.forEach(p => { p.score = 0; p.ready = false; });
+  room.players.forEach(p => { p.score = 0; p.ready = false; p.wrongGuesses = 0; });
   room.usedGames.clear();
 
   io.to(room.id).emit('game_started', { room: sanitizeRoom(room) });
@@ -382,8 +389,9 @@ function startRound(room) {
   room.round++;
   room.guessedThisRound = new Set();
   room.currentHintIndex = 0;
-  room.roundStartTime = Date.now();   // ← időmérés kezdete
-  room.roundDuration = 30;            // másodperc
+  room.roundStartTime = Date.now();
+  room.roundDuration = 30;
+  room.players.forEach(p => { p.wrongGuesses = 0; }); // kör elején nullázás
 
   // Véletlenszerű játék, amit még nem használtunk
   const available = GAMES.filter(g => !room.usedGames.has(g.name));
