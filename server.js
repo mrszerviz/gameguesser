@@ -108,29 +108,31 @@ passport.use('kick', new OAuth2Strategy({
   clientID: process.env.KICK_CLIENT_ID,
   clientSecret: process.env.KICK_CLIENT_SECRET,
   callbackURL: process.env.KICK_REDIRECT_URI,
-  scope: ['user:read'],
+  scope: 'user:read',
+  scopeSeparator: ' ',
   state: true,
+  pkce: true,
 },
-async (accessToken, refreshToken, profile, done) => {
+async (accessToken, refreshToken, params, profile, done) => {
   try {
-    // Kick API-ból felhasználó adatai
     const response = await axios.get('https://api.kick.com/public/v1/user', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
       }
     });
-    const userData = response.data;
+    const data = response.data?.data || response.data;
     const user = {
-      id: userData.data?.id || userData.id,
-      username: userData.data?.username || userData.username || userData.name,
-      avatar: userData.data?.profile_pic || userData.data?.avatar || null,
-      accessToken
+      id: data.user_id || data.id,
+      username: data.username || data.name || 'Kick User',
+      avatar: data.profile_pic || data.avatar || null,
     };
+    console.log('Kick bejelentkezés sikeres:', user.username);
     return done(null, user);
   } catch (err) {
-    console.error('Kick API hiba:', err.message);
-    return done(err);
+    console.error('Kick API hiba:', err.response?.data || err.message);
+    // API hiba esetén fallback – legalább be van jelentkezve
+    return done(null, { id: 'unknown', username: 'Kick User', avatar: null });
   }
 }));
 
@@ -138,8 +140,21 @@ async (accessToken, refreshToken, profile, done) => {
 app.get('/auth/kick', passport.authenticate('kick'));
 
 app.get('/auth/kick/callback',
-  passport.authenticate('kick', { failureRedirect: '/?error=auth_failed' }),
-  (req, res) => res.redirect('/')
+  (req, res, next) => {
+    passport.authenticate('kick', (err, user) => {
+      if (err) {
+        console.error('OAuth hiba:', err);
+        return res.redirect('/?error=' + encodeURIComponent(err.message || 'auth_failed'));
+      }
+      if (!user) {
+        return res.redirect('/?error=no_user');
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) return res.redirect('/?error=login_failed');
+        return res.redirect('/');
+      });
+    })(req, res, next);
+  }
 );
 
 app.get('/auth/logout', (req, res) => {

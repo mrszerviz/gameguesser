@@ -27,9 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const error = params.get('error');
-  if (error === 'auth_failed') {
+  if (error === 'auth_failed' || error) {
     history.replaceState({}, '', '/');
-    showToast('❌ Kick bejelentkezés sikertelen.', 'error');
+    const msg = decodeURIComponent(error);
+    showToast(`❌ Kick bejelentkezés sikertelen: ${msg}`, 'error');
   }
 });
 
