@@ -13,6 +13,7 @@ const state = {
 // ── Oldal betöltés ────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadUsername();
+  loadCategories();
   initSocket();
   setupKeyListeners();
 
@@ -33,6 +34,55 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') saveUsername();
   });
 });
+
+// ── Kategóriák betöltése ──────────────────────────────────────────────────────
+async function loadCategories() {
+  try {
+    const res = await fetch('/api/categories');
+    const cats = await res.json();
+    const sel = document.getElementById('categorySelect');
+    sel.innerHTML = '';
+    Object.entries(cats).forEach(([val, label]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('Kategória betöltési hiba:', e);
+  }
+}
+
+// ── Szoba beállítások ─────────────────────────────────────────────────────────
+function updateSettings() {
+  const category  = document.getElementById('categorySelect').value;
+  const maxRounds = parseInt(document.getElementById('roundsValue').textContent);
+  state.socket.emit('update_settings', { maxRounds, category });
+}
+
+function changeRounds(delta) {
+  const el = document.getElementById('roundsValue');
+  let val = parseInt(el.textContent) + delta;
+  val = Math.max(5, Math.min(30, val));
+  el.textContent = val;
+  updateSettings();
+}
+
+function applySettings(room, isHost) {
+  document.getElementById('roundsValue').textContent = room.maxRounds;
+  const sel = document.getElementById('categorySelect');
+  if (sel) sel.value = room.category || 'all';
+
+  const panel = document.getElementById('settingsPanel');
+  const note  = document.getElementById('settingsNote');
+  if (isHost) {
+    panel.classList.remove('readonly');
+    note.textContent = '⚙️ Te vagy a host – te állítod be a játékot.';
+  } else {
+    panel.classList.add('readonly');
+    note.textContent = '👁️ Csak a host változtathatja a beállításokat.';
+  }
+}
 
 // ── Felhasználónév kezelés (localStorage) ────────────────────────────────────
 function loadUsername() {
@@ -126,6 +176,13 @@ function initSocket() {
 
   state.socket.on('player_updated', ({ room }) => {
     renderPlayerList(room.players, room.host);
+  });
+
+  state.socket.on('settings_updated', ({ maxRounds, category, categoryName }) => {
+    document.getElementById('roundsValue').textContent = maxRounds;
+    const sel = document.getElementById('categorySelect');
+    if (sel) sel.value = category;
+    addChatSystem(`⚙️ Beállítás: ${maxRounds} kör | ${categoryName}`);
   });
 
   // ── Játék események ──
@@ -344,6 +401,8 @@ function showLobby(room, password) {
   document.getElementById('roomCodeDisplay').textContent = room.id;
   document.getElementById('roomPasswordDisplay').textContent = password || '–';
   renderPlayerList(room.players, room.host);
+  const isHost = room.host === (state.socket && state.socket.id);
+  applySettings(room, isHost);
   state.isReady = false;
   const btn = document.getElementById('readyBtn');
   btn.textContent = '✅ Kész vagyok';

@@ -31,33 +31,69 @@ function generateState() {
   return crypto.randomBytes(16).toString('hex');
 }
 
-// ─── Játékok listája (RAWG slug a képekhez) ───────────────────────────────────
+// ─── Játékok listája (RAWG slug + kategória) ──────────────────────────────────
 const GAMES = [
-  { name: "Minecraft",              slug: "minecraft",                    hints: ["Blokkos világ", "Bányászás és építés", "Creeper", "Nyílt világ survival"] },
-  { name: "Fortnite",               slug: "fortnite",                     hints: ["Battle Royale", "Építkezés a harcban", "Epic Games", "100 játékos szigeten"] },
-  { name: "GTA V",                  slug: "grand-theft-auto-v",           hints: ["Los Santos", "Nyílt világ bűnözés", "Rockstar Games", "Trevor, Michael, Franklin"] },
-  { name: "Among Us",               slug: "among-us",                     hints: ["Űrhajón játszódik", "Impostor kell megtalálni", "InnerSloth", "Crewmate feladatok"] },
-  { name: "Valorant",               slug: "valorant",                     hints: ["Taktikai lövöldözős", "Riot Games", "Ügynöki képességek", "5v5 bombás mód"] },
-  { name: "League of Legends",      slug: "league-of-legends",            hints: ["MOBA játék", "Rift pálya", "Riot Games", "Top/Mid/Bot/Jungle/Support"] },
-  { name: "Counter-Strike 2",       slug: "counter-strike-2",             hints: ["Taktikai FPS", "Terroristák vs Kommandósok", "Valve", "Bombalerakás"] },
-  { name: "Roblox",                 slug: "roblox",                       hints: ["Felhasználók által készített játékok", "Blocky karakterek", "Robux valuta", "Gyerekek kedvence"] },
-  { name: "Apex Legends",           slug: "apex-legends",                 hints: ["Battle Royale", "Legendák különleges képességei", "EA Respawn", "Pályák és pingrendszer"] },
-  { name: "Rocket League",          slug: "rocket-league",                hints: ["Autók fociznak", "Psyonix", "Aerial manőverek", "Boost gyűjtés"] },
-  { name: "Overwatch 2",            slug: "overwatch-2",                  hints: ["Hős-alapú lövöldözős", "Blizzard", "Tank/Support/DPS", "Payload mód"] },
-  { name: "The Witcher 3",          slug: "the-witcher-3-wild-hunt",      hints: ["Fehér Farkas", "Geralt of Rivia", "CD Projekt Red", "Nyílt világ RPG"] },
-  { name: "Cyberpunk 2077",         slug: "cyberpunk-2077",               hints: ["Night City", "V főszereplő", "CD Projekt Red", "Futurisztikus RPG"] },
-  { name: "Elden Ring",             slug: "elden-ring",                   hints: ["FromSoftware", "Nyílt világ souls-like", "George R.R. Martin", "Tarnished főszereplő"] },
-  { name: "Red Dead Redemption 2",  slug: "red-dead-redemption-2",        hints: ["Vadnyugat", "Arthur Morgan", "Rockstar Games", "Nyílt világ western"] },
-  { name: "Call of Duty: Warzone",  slug: "call-of-duty-warzone",         hints: ["Battle Royale", "Activision", "Gulág visszatérés", "Verdansk térkép"] },
-  { name: "Dota 2",                 slug: "dota-2",                       hints: ["MOBA játék", "Valve", "Ancient elpusztítása", "5v5 stratégia"] },
-  { name: "Terraria",               slug: "terraria",                     hints: ["2D sandbox", "Bosszok legyőzése", "Re-Logic", "Bányászás és kaland"] },
-  { name: "Stardew Valley",         slug: "stardew-valley",               hints: ["Farm szimuláció", "ConcernedApe", "Pelican Town", "Gazda élet"] },
-  { name: "Fall Guys",              slug: "fall-guys",                    hints: ["Party battle royale", "Mediatonic", "Jelly Bean karakterek", "Akadálypályák"] },
-  { name: "Hollow Knight",          slug: "hollow-knight",                hints: ["Metroidvania", "Team Cherry", "Rovar világ", "Hallownest kingdom"] },
-  { name: "Celeste",                slug: "celeste",                      hints: ["Platformer", "Madeline főszereplő", "Hegymászás", "Nehéz de igazságos"] },
-  { name: "Hades",                  slug: "hades",                        hints: ["Roguelite", "Supergiant Games", "Görög mitológia", "Alvilágból menekülés"] },
-  { name: "Sekiro",                 slug: "sekiro-shadows-die-twice",     hints: ["FromSoftware", "Japán shinobi", "Posture rendszer", "Genichiro boss"] },
+  // ── Battle Royale ──
+  { name: "Fortnite",               slug: "fortnite",                     category: "battle-royale", hints: ["Battle Royale", "Építkezés a harcban", "Epic Games", "100 játékos szigeten"] },
+  { name: "Apex Legends",           slug: "apex-legends",                 category: "battle-royale", hints: ["Battle Royale", "Legendák különleges képességei", "EA Respawn", "Pályák és pingrendszer"] },
+  { name: "Call of Duty: Warzone",  slug: "call-of-duty-warzone",         category: "battle-royale", hints: ["Battle Royale", "Activision", "Gulág visszatérés", "Verdansk térkép"] },
+  { name: "PUBG",                   slug: "playerunknowns-battlegrounds", category: "battle-royale", hints: ["Battle Royale", "Erangel térkép", "Fanzón szűkül", "Brendan Greene"] },
+  { name: "Fall Guys",              slug: "fall-guys",                    category: "battle-royale", hints: ["Party battle royale", "Mediatonic", "Jelly Bean karakterek", "Akadálypályák"] },
+
+  // ── FPS / Lövöldözős ──
+  { name: "Valorant",               slug: "valorant",                     category: "fps", hints: ["Taktikai lövöldözős", "Riot Games", "Ügynöki képességek", "5v5 bombás mód"] },
+  { name: "Counter-Strike 2",       slug: "counter-strike-2",             category: "fps", hints: ["Taktikai FPS", "Terroristák vs Kommandósok", "Valve", "Bombalerakás"] },
+  { name: "Overwatch 2",            slug: "overwatch-2",                  category: "fps", hints: ["Hős-alapú lövöldözős", "Blizzard", "Tank/Support/DPS", "Payload mód"] },
+  { name: "Destiny 2",              slug: "destiny-2",                    category: "fps", hints: ["Looter shooter", "Bungie", "Guardian főszereplő", "Raid küldetések"] },
+  { name: "Rainbow Six Siege",      slug: "tom-clancys-rainbow-six-siege",category: "fps", hints: ["Taktikai FPS", "Ubisoft", "Operátorok képességei", "Rombolható falak"] },
+
+  // ── MOBA / Stratégia ──
+  { name: "League of Legends",      slug: "league-of-legends",            category: "moba", hints: ["MOBA játék", "Rift pálya", "Riot Games", "Top/Mid/Bot/Jungle/Support"] },
+  { name: "Dota 2",                 slug: "dota-2",                       category: "moba", hints: ["MOBA játék", "Valve", "Ancient elpusztítása", "5v5 stratégia"] },
+  { name: "Clash Royale",           slug: "clash-royale",                 category: "moba", hints: ["Mobil stratégia", "Supercell", "Kártya alapú harc", "Aréna tornyok"] },
+
+  // ── RPG ──
+  { name: "The Witcher 3",          slug: "the-witcher-3-wild-hunt",      category: "rpg", hints: ["Fehér Farkas", "Geralt of Rivia", "CD Projekt Red", "Nyílt világ RPG"] },
+  { name: "Cyberpunk 2077",         slug: "cyberpunk-2077",               category: "rpg", hints: ["Night City", "V főszereplő", "CD Projekt Red", "Futurisztikus RPG"] },
+  { name: "Elden Ring",             slug: "elden-ring",                   category: "rpg", hints: ["FromSoftware", "Nyílt világ souls-like", "George R.R. Martin", "Tarnished főszereplő"] },
+  { name: "Sekiro",                 slug: "sekiro-shadows-die-twice",     category: "rpg", hints: ["FromSoftware", "Japán shinobi", "Posture rendszer", "Genichiro boss"] },
+  { name: "Red Dead Redemption 2",  slug: "red-dead-redemption-2",        category: "rpg", hints: ["Vadnyugat", "Arthur Morgan", "Rockstar Games", "Nyílt világ western"] },
+  { name: "Skyrim",                 slug: "the-elder-scrolls-v-skyrim",   category: "rpg", hints: ["Északi tájak", "Sárkányok", "Bethesda", "Dragonborn főszereplő"] },
+  { name: "Dark Souls 3",           slug: "dark-souls-iii",               category: "rpg", hints: ["FromSoftware", "Souls-like", "Nehéz boss harcok", "Lothric kingdom"] },
+  { name: "Hades",                  slug: "hades",                        category: "rpg", hints: ["Roguelite", "Supergiant Games", "Görög mitológia", "Alvilágból menekülés"] },
+
+  // ── Sandbox / Nyílt világ ──
+  { name: "Minecraft",              slug: "minecraft",                    category: "sandbox", hints: ["Blokkos világ", "Bányászás és építés", "Creeper", "Nyílt világ survival"] },
+  { name: "GTA V",                  slug: "grand-theft-auto-v",           category: "sandbox", hints: ["Los Santos", "Nyílt világ bűnözés", "Rockstar Games", "Trevor, Michael, Franklin"] },
+  { name: "Roblox",                 slug: "roblox",                       category: "sandbox", hints: ["Felhasználók által készített játékok", "Blocky karakterek", "Robux valuta", "Gyerekek kedvence"] },
+  { name: "Terraria",               slug: "terraria",                     category: "sandbox", hints: ["2D sandbox", "Bosszok legyőzése", "Re-Logic", "Bányászás és kaland"] },
+  { name: "No Man's Sky",           slug: "no-mans-sky",                  category: "sandbox", hints: ["Végtelen bolygók", "Hello Games", "Űrutazás", "Procedurális generálás"] },
+
+  // ── Sport / Verseny ──
+  { name: "Rocket League",          slug: "rocket-league",                category: "sport", hints: ["Autók fociznak", "Psyonix", "Aerial manőverek", "Boost gyűjtés"] },
+  { name: "FIFA 24",                slug: "ea-sports-fc-24",              category: "sport", hints: ["EA Sports", "Ultimate Team", "Focis szimuláció", "Évi megjelenés"] },
+  { name: "NBA 2K24",               slug: "nba-2k24",                     category: "sport", hints: ["Kosárlabda szimuláció", "2K Games", "MyCareer mód", "Jordan Challenge"] },
+
+  // ── Indie ──
+  { name: "Among Us",               slug: "among-us",                     category: "indie", hints: ["Űrhajón játszódik", "Impostor kell megtalálni", "InnerSloth", "Crewmate feladatok"] },
+  { name: "Hollow Knight",          slug: "hollow-knight",                category: "indie", hints: ["Metroidvania", "Team Cherry", "Rovar világ", "Hallownest kingdom"] },
+  { name: "Celeste",                slug: "celeste",                      category: "indie", hints: ["Platformer", "Madeline főszereplő", "Hegymászás", "Nehéz de igazságos"] },
+  { name: "Stardew Valley",         slug: "stardew-valley",               category: "indie", hints: ["Farm szimuláció", "ConcernedApe", "Pelican Town", "Gazda élet"] },
+  { name: "Cuphead",                slug: "cuphead",                      category: "indie", hints: ["1930-as rajzfilm stílus", "StudioMDHR", "Nehéz boss rush", "Animált karakterek"] },
+  { name: "Undertale",              slug: "undertale",                    category: "indie", hints: ["RPG ahol nem kell ölni", "Toby Fox", "Pacifist út", "Sans boss"] },
 ];
+
+// Elérhető kategóriák
+const CATEGORIES = {
+  'all':          'Minden kategória',
+  'battle-royale':'Battle Royale',
+  'fps':          'FPS / Lövöldözős',
+  'moba':         'MOBA / Stratégia',
+  'rpg':          'RPG',
+  'sandbox':      'Sandbox / Nyílt világ',
+  'sport':        'Sport / Verseny',
+  'indie':        'Indie',
+};
 
 // ─── RAWG képcache (slug → imageUrl) ─────────────────────────────────────────
 const imageCache = new Map();
@@ -196,6 +232,10 @@ app.get('/auth/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
 });
 
+app.get('/api/categories', (req, res) => {
+  res.json(CATEGORIES);
+});
+
 app.get('/api/user', (req, res) => {
   if (req.session.user) {
     res.json({ loggedIn: true, user: req.session.user });
@@ -241,6 +281,7 @@ io.on('connection', (socket) => {
       hintInterval: null,
       round: 0,
       maxRounds: 5,
+      category: 'all',
       guessedThisRound: new Set(),
       usedGames: new Set(),
     };
@@ -286,6 +327,30 @@ io.on('connection', (socket) => {
     socket.emit('room_joined', { roomId: room.id, room: sanitizeRoom(room) });
     io.to(room.id).emit('player_joined', { player, room: sanitizeRoom(room) });
     console.log(`${username} csatlakozott: ${room.id}`);
+  });
+
+  // Szoba beállítások frissítése (csak host)
+  socket.on('update_settings', ({ maxRounds, category }) => {
+    const room = rooms.get(socket.roomId);
+    if (!room || room.host !== socket.id || room.state !== 'lobby') return;
+
+    const rounds = parseInt(maxRounds);
+    if (isNaN(rounds) || rounds < 5 || rounds > 30) {
+      socket.emit('error_msg', 'A körök száma 5–30 között legyen!');
+      return;
+    }
+    if (!CATEGORIES[category]) {
+      socket.emit('error_msg', 'Érvénytelen kategória!');
+      return;
+    }
+
+    room.maxRounds = rounds;
+    room.category  = category;
+    io.to(room.id).emit('settings_updated', {
+      maxRounds: room.maxRounds,
+      category:  room.category,
+      categoryName: CATEGORIES[category],
+    });
   });
 
   // Játékos kész jelzés
@@ -420,10 +485,14 @@ function startRound(room) {
   room.roundDuration = 30;
   room.players.forEach(p => { p.wrongGuesses = 0; }); // kör elején nullázás
 
-  // Véletlenszerű játék, amit még nem használtunk
-  const available = GAMES.filter(g => !room.usedGames.has(g.name));
+  // Véletlenszerű játék, amit még nem használtunk (kategória szűréssel)
+  const pool = room.category && room.category !== 'all'
+    ? GAMES.filter(g => g.category === room.category)
+    : GAMES;
+  const available = pool.filter(g => !room.usedGames.has(g.name));
   if (available.length === 0) room.usedGames.clear();
-  const randomGame = available[Math.floor(Math.random() * available.length)];
+  const filtered = pool.filter(g => !room.usedGames.has(g.name));
+  const randomGame = filtered[Math.floor(Math.random() * filtered.length)];
   room.currentGame = randomGame;
   room.usedGames.add(randomGame.name);
 
@@ -560,6 +629,7 @@ function sanitizeRoom(room) {
     state: room.state,
     round: room.round,
     maxRounds: room.maxRounds,
+    category: room.category || 'all',
   };
 }
 

@@ -68,6 +68,29 @@
         <button class="btn btn-outline" onclick="copyInvite()">📋 Meghívó másolása</button>
       </div>
       <div id="playerList" class="player-list"></div>
+
+      <!-- Beállítások (csak hostnak szerkeszthető) -->
+      <div class="settings-panel" id="settingsPanel">
+        <h3>⚙️ Játék beállítások</h3>
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label class="input-label">🎮 Kategória</label>
+            <select class="input select-input" id="categorySelect" onchange="updateSettings()">
+              <option value="all">Minden kategória</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label class="input-label">🔄 Körök száma (5–30)</label>
+            <div class="round-control">
+              <button class="btn btn-secondary round-btn" onclick="changeRounds(-1)">−</button>
+              <span id="roundsValue" class="rounds-display">5</span>
+              <button class="btn btn-secondary round-btn" onclick="changeRounds(1)">+</button>
+            </div>
+          </div>
+        </div>
+        <p class="settings-note" id="settingsNote"></p>
+      </div>
+
       <div class="lobby-actions">
         <button class="btn btn-primary" id="readyBtn" onclick="toggleReady()">✅ Kész vagyok</button>
         <p class="lobby-hint">Minden játékosnak késznek kell lennie a kezdéshez.</p>

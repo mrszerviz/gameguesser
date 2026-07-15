@@ -177,6 +177,31 @@ body {
 .lobby-password { color: var(--accent); font-size: 0.9rem; margin-top: 4px; font-family: monospace; }
 .lobby-password span { font-weight: 700; letter-spacing: 1px; }
 
+.settings-panel {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.settings-panel h3 { font-size: 0.95rem; margin-bottom: 14px; color: var(--text-muted); }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 500px) { .settings-grid { grid-template-columns: 1fr; } }
+.setting-item { display: flex; flex-direction: column; gap: 8px; }
+.select-input { cursor: pointer; }
+.round-control { display: flex; align-items: center; gap: 12px; }
+.round-btn { padding: 6px 14px; font-size: 1.1rem; font-weight: 800; }
+.rounds-display {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  min-width: 36px;
+  text-align: center;
+}
+.settings-note { font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; }
+.settings-panel.readonly .select-input,
+.settings-panel.readonly .round-btn { pointer-events: none; opacity: 0.5; }
+
 .input-group { display: flex; flex-direction: column; gap: 4px; width: 100%; }
 .input-label { font-size: 0.85rem; color: var(--text-muted); }
 .input-hint  { font-size: 0.75rem; color: var(--text-muted); }
