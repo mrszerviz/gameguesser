@@ -123,7 +123,7 @@ function initSocket() {
     addChatSystem('🎮 A játék elkezdődött!');
   });
 
-  state.socket.on('round_start', ({ round, maxRounds, hint, hintIndex, totalHints }) => {
+  state.socket.on('round_start', ({ round, maxRounds, hint, hintIndex, totalHints, imageUrl, blurPx }) => {
     state.currentRound = round;
     state.guessedThisRound = false;
     clearHints();
@@ -132,11 +132,13 @@ function initSocket() {
     document.getElementById('guessInput').value = '';
     setFeedback('', '');
     addHint(hint, hintIndex, totalHints);
+    setGameImage(imageUrl, blurPx);
     addChatSystem(`🎯 ${round}. kör kezdődik!`);
   });
 
-  state.socket.on('new_hint', ({ hint, hintIndex }) => {
+  state.socket.on('new_hint', ({ hint, hintIndex, blurPx }) => {
     addHint(hint, hintIndex);
+    updateImageBlur(blurPx);
   });
 
   state.socket.on('correct_guess', ({ playerId, username, points, answer, room }) => {
@@ -420,4 +422,40 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ── Játék képe ────────────────────────────────────────────────────────────────
+function setGameImage(imageUrl, blurPx) {
+  const img = document.getElementById('gameImage');
+  const placeholder = document.getElementById('gameImagePlaceholder');
+  const wrap = document.getElementById('gameImageWrap');
+
+  if (!imageUrl) {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+    placeholder.textContent = '🖼️ Nincs kép';
+    return;
+  }
+
+  placeholder.style.display = 'flex';
+  placeholder.textContent = '🖼️ Betöltés...';
+  img.style.display = 'none';
+
+  img.onload = () => {
+    placeholder.style.display = 'none';
+    img.style.display = 'block';
+    img.style.filter = `blur(${blurPx}px)`;
+    img.style.transition = 'filter 1s ease';
+  };
+  img.onerror = () => {
+    placeholder.textContent = '🖼️ Kép nem elérhető';
+  };
+  img.src = imageUrl;
+}
+
+function updateImageBlur(blurPx) {
+  const img = document.getElementById('gameImage');
+  if (img && img.style.display !== 'none') {
+    img.style.filter = `blur(${blurPx}px)`;
+  }
 }
