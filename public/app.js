@@ -19,10 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // URL-ben van meghívó kód?
   const params = new URLSearchParams(window.location.search);
   const inviteCode = params.get('room');
+  const invitePw   = params.get('pw');
   if (inviteCode) {
     history.replaceState({}, '', '/');
     showPage('homePage');
     document.getElementById('joinCodeInput').value = inviteCode.toUpperCase();
+    if (invitePw) document.getElementById('joinPasswordInput').value = decodeURIComponent(invitePw);
     showToast(`🔗 Meghívó: ${inviteCode.toUpperCase()} – csatlakozz!`, 'success');
   }
 
@@ -99,15 +101,16 @@ function initSocket() {
   });
 
   // ── Szoba események ──
-  state.socket.on('room_created', ({ roomId, room }) => {
+  state.socket.on('room_created', ({ roomId, password, room }) => {
     state.roomId = roomId;
-    showLobby(room);
-    showToast(`✅ Szoba létrehozva: ${roomId}`, 'success');
+    state.roomPassword = password;
+    showLobby(room, password);
+    showToast(`✅ Szoba létrehozva: ${roomId} | Jelszó: ${password}`, 'success');
   });
 
   state.socket.on('room_joined', ({ roomId, room }) => {
     state.roomId = roomId;
-    showLobby(room);
+    showLobby(room, document.getElementById('joinPasswordInput').value.trim());
     showToast(`👋 Csatlakoztál a szobához: ${roomId}`, 'success');
   });
 
@@ -242,25 +245,31 @@ function getAvatar() {
 
 function createRoom() {
   const name = getUsername();
-  if (!name) {
-    showToast('⚠️ Először állíts be egy nevet!', 'error');
+  if (!name) { showToast('⚠️ Először állíts be egy nevet!', 'error'); return; }
+
+  const pw = document.getElementById('createPasswordInput').value.trim();
+  if (pw.length > 0 && (pw.length < 2 || pw.length > 15)) {
+    showToast('❌ A jelszó 2–15 karakter legyen!', 'error');
     return;
   }
-  state.socket.emit('create_room', { username: name, avatar: getAvatar() });
+  state.socket.emit('create_room', { username: name, avatar: getAvatar(), password: pw });
 }
 
 function joinRoom() {
   const name = getUsername();
-  if (!name) {
-    showToast('⚠️ Először állíts be egy nevet!', 'error');
-    return;
-  }
+  if (!name) { showToast('⚠️ Először állíts be egy nevet!', 'error'); return; }
+
   const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
   if (!code || code.length !== 6) {
     showToast('❌ Adj meg egy 6 karakteres szoba kódot!', 'error');
     return;
   }
-  state.socket.emit('join_room', { roomId: code, username: name, avatar: getAvatar() });
+  const pw = document.getElementById('joinPasswordInput').value.trim();
+  if (!pw) {
+    showToast('❌ Add meg a szoba jelszavát!', 'error');
+    return;
+  }
+  state.socket.emit('join_room', { roomId: code, username: name, avatar: getAvatar(), password: pw });
 }
 
 function toggleReady() {
@@ -272,12 +281,11 @@ function toggleReady() {
 }
 
 function copyInvite() {
-  const url = `${window.location.origin}?room=${state.roomId}`;
+  const pw = document.getElementById('roomPasswordDisplay').textContent;
+  const url = `${window.location.origin}?room=${state.roomId}&pw=${encodeURIComponent(pw)}`;
   navigator.clipboard.writeText(url).then(() => {
-    showToast('📋 Meghívó link másolva!', 'success');
-  }).catch(() => {
-    showToast('Link: ' + url);
-  });
+    showToast('📋 Meghívó link másolva! (kód + jelszó)', 'success');
+  }).catch(() => showToast('Link: ' + url));
 }
 
 // ── Tipp küldése ──────────────────────────────────────────────────────────────
@@ -329,8 +337,9 @@ function showPage(pageId) {
   document.getElementById(pageId).classList.add('active');
 }
 
-function showLobby(room) {
+function showLobby(room, password) {
   document.getElementById('roomCodeDisplay').textContent = room.id;
+  document.getElementById('roomPasswordDisplay').textContent = password || '–';
   renderPlayerList(room.players, room.host);
   state.isReady = false;
   const btn = document.getElementById('readyBtn');

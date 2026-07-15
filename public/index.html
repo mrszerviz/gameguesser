@@ -39,13 +39,19 @@
         <div class="card">
           <h2>➕ Szoba létrehozása</h2>
           <p>Hívd meg barátaidat és játsszatok együtt!</p>
+          <div class="input-group">
+            <label class="input-label">Jelszó (opcionális)</label>
+            <input class="input" id="createPasswordInput" placeholder="Hagyd üresen = auto-generált" maxlength="15" />
+            <p class="input-hint">2–15 karakter, vagy hagyd üresen</p>
+          </div>
           <button class="btn btn-primary" onclick="createRoom()">Szoba létrehozása</button>
         </div>
         <div class="card">
           <h2>🔗 Csatlakozás szobához</h2>
-          <p>Add meg a szoba kódját a csatlakozáshoz.</p>
-          <input class="input" id="joinCodeInput" placeholder="pl. A3F9B2" maxlength="6" />
-          <button class="btn btn-secondary" onclick="joinRoom()">Csatlakozás</button>
+          <p>Add meg a szoba kódját és jelszavát.</p>
+          <input class="input" id="joinCodeInput" placeholder="Szoba kód (pl. A3F9B2)" maxlength="6" />
+          <input class="input" id="joinPasswordInput" placeholder="Jelszó" maxlength="15" style="margin-top:8px;" />
+          <button class="btn btn-secondary" onclick="joinRoom()" style="margin-top:4px;">Csatlakozás</button>
         </div>
       </div>
     </div>
@@ -55,7 +61,10 @@
   <div id="lobbyPage" class="page">
     <div class="lobby-container">
       <div class="lobby-header">
-        <h2>🚪 Szoba: <span id="roomCodeDisplay"></span></h2>
+        <div>
+          <h2>🚪 Szoba: <span id="roomCodeDisplay"></span></h2>
+          <p class="lobby-password">🔑 Jelszó: <span id="roomPasswordDisplay"></span></p>
+        </div>
         <button class="btn btn-outline" onclick="copyInvite()">📋 Meghívó másolása</button>
       </div>
       <div id="playerList" class="player-list"></div>

@@ -97,6 +97,14 @@ async function prefetchAllImages() {
   console.log(`✅ Képek betöltve: ${loaded}/${GAMES.length}`);
 }
 
+// ─── Jelszó generálás ─────────────────────────────────────────────────────────
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join('');
+}
+
 // ─── Szobák tárolása ──────────────────────────────────────────────────────────
 const rooms = new Map();
 
@@ -201,19 +209,33 @@ io.on('connection', (socket) => {
   console.log(`Kapcsolódott: ${socket.id}`);
 
   // Szoba létrehozása
-  socket.on('create_room', ({ username, avatar }) => {
+  socket.on('create_room', ({ username, avatar, password }) => {
     const roomId = uuidv4().substring(0, 6).toUpperCase();
+
+    // Jelszó validáció és auto-generálás
+    let roomPassword;
+    if (!password || password.trim().length === 0) {
+      roomPassword = generatePassword(); // auto-generált
+    } else if (password.trim().length < 2 || password.trim().length > 15) {
+      socket.emit('error_msg', 'A jelszó 2–15 karakter legyen!');
+      return;
+    } else {
+      roomPassword = password.trim();
+    }
+
     const room = {
       id: roomId,
+      password: roomPassword,
       host: socket.id,
       players: [{
         id: socket.id,
         username: username || 'Vendég',
         avatar: avatar || null,
         score: 0,
-        ready: false
+        ready: false,
+        wrongGuesses: 0,
       }],
-      state: 'lobby',       // lobby | playing | roundEnd | gameOver
+      state: 'lobby',
       currentGame: null,
       currentHintIndex: 0,
       hintInterval: null,
@@ -225,12 +247,12 @@ io.on('connection', (socket) => {
     rooms.set(roomId, room);
     socket.join(roomId);
     socket.roomId = roomId;
-    socket.emit('room_created', { roomId, room: sanitizeRoom(room) });
-    console.log(`Szoba létrehozva: ${roomId} by ${username}`);
+    socket.emit('room_created', { roomId, password: roomPassword, room: sanitizeRoom(room) });
+    console.log(`Szoba létrehozva: ${roomId} (jelszó: ${roomPassword}) by ${username}`);
   });
 
   // Szobához csatlakozás
-  socket.on('join_room', ({ roomId, username, avatar }) => {
+  socket.on('join_room', ({ roomId, username, avatar, password }) => {
     const room = rooms.get(roomId.toUpperCase());
     if (!room) {
       socket.emit('error_msg', 'Nem létező szoba!');
@@ -244,13 +266,18 @@ io.on('connection', (socket) => {
       socket.emit('error_msg', 'A szoba tele van! (max 8 játékos)');
       return;
     }
+    if (!password || password.trim() !== room.password) {
+      socket.emit('error_msg', '🔑 Helytelen jelszó!');
+      return;
+    }
 
     const player = {
       id: socket.id,
       username: username || 'Vendég',
       avatar: avatar || null,
       score: 0,
-      ready: false
+      ready: false,
+      wrongGuesses: 0,
     };
     room.players.push(player);
     socket.join(roomId.toUpperCase());
