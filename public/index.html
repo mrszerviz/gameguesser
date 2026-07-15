@@ -12,12 +12,22 @@
   <nav class="navbar">
     <div class="nav-logo">🎮 Game Guesser</div>
     <div class="nav-user" id="navUser">
-      <button class="btn btn-kick" id="loginBtn" onclick="kickLogin()">
-        <img src="https://kick.com/favicon.ico" width="18" height="18" alt="Kick" />
-        Bejelentkezés Kick-kel
-      </button>
+      <button class="btn btn-primary" onclick="openUsernameModal()">👤 Név beállítása</button>
     </div>
   </nav>
+
+  <!-- ── FELHASZNÁLÓNÉV MODAL ── -->
+  <div id="usernameModal" class="modal-overlay" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <h2>👤 Felhasználónév beállítása</h2>
+      <p class="modal-sub">Ez lesz a neved a játékban</p>
+      <input class="input" id="usernameInput" placeholder="pl. GameMester99" maxlength="20" />
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="saveUsername()">✅ Mentés</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Mégse</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── FŐOLDAL (lobby) ── -->
   <div id="homePage" class="page active">

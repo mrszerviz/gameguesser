@@ -11,8 +11,8 @@ const state = {
 };
 
 // ── Oldal betöltés ────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  await fetchUser();
+document.addEventListener('DOMContentLoaded', () => {
+  loadUsername();
   initSocket();
   setupKeyListeners();
 
@@ -26,54 +26,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(`🔗 Meghívó: ${inviteCode.toUpperCase()} – csatlakozz!`, 'success');
   }
 
-  const error = params.get('error');
-  if (error === 'auth_failed' || error) {
-    history.replaceState({}, '', '/');
-    const msg = decodeURIComponent(error);
-    showToast(`❌ Kick bejelentkezés sikertelen: ${msg}`, 'error');
-  }
+  // Enter a modal inputban
+  document.getElementById('usernameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveUsername();
+  });
 });
 
-// ── Felhasználó betöltése ─────────────────────────────────────────────────────
-async function fetchUser() {
-  try {
-    const res = await fetch('/api/user');
-    const data = await res.json();
-    if (data.loggedIn) {
-      state.user = data.user;
-      renderNavUser(data.user);
-    } else {
-      renderNavGuest();
-    }
-  } catch (e) {
-    console.error('fetchUser hiba:', e);
-    renderNavGuest();
+// ── Felhasználónév kezelés (localStorage) ────────────────────────────────────
+function loadUsername() {
+  const saved = localStorage.getItem('gg_username');
+  if (saved) {
+    state.user = { id: null, username: saved, avatar: null };
+    renderNavUser(saved);
+  } else {
+    // Első látogatás – azonnal kéri a nevet
+    setTimeout(() => openUsernameModal(), 300);
   }
 }
 
-function renderNavUser(user) {
-  const nav = document.getElementById('navUser');
-  const avatarHtml = user.avatar
-    ? `<img class="nav-avatar" src="${escHtml(user.avatar)}" alt="Avatar" />`
-    : `<div class="nav-avatar" style="background:var(--bg3);display:flex;align-items:center;justify-content:center;">👤</div>`;
-  nav.innerHTML = `
-    ${avatarHtml}
-    <span class="nav-username">${escHtml(user.username)}</span>
-    <a href="/auth/logout" class="btn btn-outline" style="font-size:0.8rem;padding:6px 12px;">Kilépés</a>
-  `;
-}
-
-function renderNavGuest() {
+function renderNavUser(username) {
   document.getElementById('navUser').innerHTML = `
-    <button class="btn btn-kick" onclick="kickLogin()">
-      <img src="https://kick.com/favicon.ico" width="18" height="18" alt="Kick" />
-      Bejelentkezés Kick-kel
-    </button>
+    <span style="font-size:1.2rem;">👤</span>
+    <span class="nav-username">${escHtml(username)}</span>
+    <button class="btn btn-outline" style="font-size:0.8rem;padding:6px 12px;" onclick="openUsernameModal()">✏️ Szerkesztés</button>
   `;
 }
 
-function kickLogin() {
-  window.location.href = '/auth/kick';
+// ── Modal kezelés ─────────────────────────────────────────────────────────────
+function openUsernameModal() {
+  const current = state.user?.username || '';
+  document.getElementById('usernameInput').value = current;
+  document.getElementById('usernameModal').classList.add('open');
+  setTimeout(() => document.getElementById('usernameInput').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('usernameModal').classList.remove('open');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('usernameModal')) closeModal();
+}
+
+function saveUsername() {
+  const input = document.getElementById('usernameInput');
+  const name = input.value.trim();
+  if (!name || name.length < 2) {
+    showToast('❌ A név legalább 2 karakter legyen!', 'error');
+    return;
+  }
+  if (name.length > 20) {
+    showToast('❌ Maximum 20 karakter!', 'error');
+    return;
+  }
+  localStorage.setItem('gg_username', name);
+  state.user = { id: null, username: name, avatar: null };
+  renderNavUser(name);
+  closeModal();
+  showToast(`✅ Név beállítva: ${name}`, 'success');
 }
 
 // ── Socket.io init ────────────────────────────────────────────────────────────
@@ -203,30 +213,36 @@ function setupKeyListeners() {
 
 // ── Szoba műveletek ───────────────────────────────────────────────────────────
 function getUsername() {
-  return state.user ? state.user.username : ('Vendég_' + Math.floor(Math.random() * 9000 + 1000));
+  if (state.user?.username) return state.user.username;
+  // Ha még nincs neve, kéri be
+  openUsernameModal();
+  return null;
 }
 function getAvatar() {
-  return state.user ? state.user.avatar : null;
+  return state.user?.avatar || null;
 }
 
 function createRoom() {
-  state.socket.emit('create_room', {
-    username: getUsername(),
-    avatar: getAvatar()
-  });
+  const name = getUsername();
+  if (!name) {
+    showToast('⚠️ Először állíts be egy nevet!', 'error');
+    return;
+  }
+  state.socket.emit('create_room', { username: name, avatar: getAvatar() });
 }
 
 function joinRoom() {
+  const name = getUsername();
+  if (!name) {
+    showToast('⚠️ Először állíts be egy nevet!', 'error');
+    return;
+  }
   const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
   if (!code || code.length !== 6) {
     showToast('❌ Adj meg egy 6 karakteres szoba kódot!', 'error');
     return;
   }
-  state.socket.emit('join_room', {
-    roomId: code,
-    username: getUsername(),
-    avatar: getAvatar()
-  });
+  state.socket.emit('join_room', { roomId: code, username: name, avatar: getAvatar() });
 }
 
 function toggleReady() {
