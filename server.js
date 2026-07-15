@@ -291,8 +291,12 @@ io.on('connection', (socket) => {
 
     if (correct) {
       room.guessedThisRound.add(socket.id);
-      // Pont: minél kevesebb hint kellett, annál több pont
-      const points = Math.max(10 - room.currentHintIndex * 2, 2);
+
+      // Időalapú pontozás: 0-30mp között 100→10 pont
+      const elapsed = (Date.now() - room.roundStartTime) / 1000; // másodpercben
+      const duration = room.roundDuration;
+      const ratio = Math.max(0, 1 - elapsed / duration);         // 1.0 → 0.0
+      const points = Math.round(10 + ratio * 90);                 // 100→10 pont
       player.score += points;
 
       io.to(room.id).emit('correct_guess', {
@@ -378,6 +382,8 @@ function startRound(room) {
   room.round++;
   room.guessedThisRound = new Set();
   room.currentHintIndex = 0;
+  room.roundStartTime = Date.now();   // ← időmérés kezdete
+  room.roundDuration = 30;            // másodperc
 
   // Véletlenszerű játék, amit még nem használtunk
   const available = GAMES.filter(g => !room.usedGames.has(g.name));
@@ -388,7 +394,6 @@ function startRound(room) {
 
   const imageUrl = imageCache.get(randomGame.slug) || null;
   const totalHints = randomGame.hints.length;
-  // blur: 4 hint esetén 24px → 16px → 8px → 0px
   const blurLevels = Array.from({ length: totalHints }, (_, i) =>
     Math.max(0, Math.round(24 - (24 / (totalHints - 1 || 1)) * i))
   );
@@ -401,9 +406,10 @@ function startRound(room) {
     totalHints,
     imageUrl,
     blurPx: blurLevels[0],
+    duration: room.roundDuration,    // ← frontend tudja meddig tart
   });
 
-  // Tipp megjelenítés időzítve
+  // Hint időzítő (8 mp-enként új hint)
   let hintIdx = 1;
   room.hintInterval = setInterval(() => {
     if (hintIdx < randomGame.hints.length) {
@@ -415,16 +421,21 @@ function startRound(room) {
       });
       hintIdx++;
     } else {
-      // Minden hint elfogyott – round over
       clearInterval(room.hintInterval);
-      io.to(room.id).emit('round_timeout', { answer: randomGame.name, room: sanitizeRoom(room) });
-      setTimeout(() => nextRound(room), 4000);
     }
-  }, 8000); // 8 másodpercenként új hint
+  }, 8000);
+
+  // 30 másodperces kör időkorlát
+  room.roundTimeout = setTimeout(() => {
+    clearInterval(room.hintInterval);
+    io.to(room.id).emit('round_timeout', { answer: randomGame.name, room: sanitizeRoom(room) });
+    setTimeout(() => nextRound(room), 4000);
+  }, room.roundDuration * 1000);
 }
 
 function nextRound(room) {
   clearInterval(room.hintInterval);
+  clearTimeout(room.roundTimeout);
   if (room.round >= room.maxRounds) {
     endGame(room);
   } else {

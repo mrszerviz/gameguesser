@@ -134,7 +134,7 @@ function initSocket() {
     addChatSystem('🎮 A játék elkezdődött!');
   });
 
-  state.socket.on('round_start', ({ round, maxRounds, hint, hintIndex, totalHints, imageUrl, blurPx }) => {
+  state.socket.on('round_start', ({ round, maxRounds, hint, hintIndex, totalHints, imageUrl, blurPx, duration }) => {
     state.currentRound = round;
     state.guessedThisRound = false;
     clearHints();
@@ -145,6 +145,7 @@ function initSocket() {
     addHint(hint, hintIndex, totalHints);
     setGameImage(imageUrl, blurPx);
     addChatSystem(`🎯 ${round}. kör kezdődik!`);
+    startTimer(duration);
   });
 
   state.socket.on('new_hint', ({ hint, hintIndex, blurPx }) => {
@@ -158,6 +159,7 @@ function initSocket() {
       state.guessedThisRound = true;
       document.getElementById('guessInput').disabled = true;
       setFeedback(`🎉 Helyes! +${points} pont`, 'correct');
+      stopTimer();
     }
     updateScoreboard(room.players);
     addChatSystem(`✅ ${username} kitalálta! (+${points} pont)`);
@@ -177,6 +179,7 @@ function initSocket() {
 
   state.socket.on('round_timeout', ({ answer, room }) => {
     document.getElementById('guessInput').disabled = true;
+    stopTimer();
     setFeedback(`⏰ Idő lejárt! A válasz: ${answer}`, 'info');
     updateScoreboard(room.players);
     addChatSystem(`⏰ A helyes válasz: ${answer}`);
@@ -479,4 +482,44 @@ function updateImageBlur(blurPx) {
   if (img && img.style.display !== 'none') {
     img.style.filter = `blur(${blurPx}px)`;
   }
+}
+
+// ── Visszaszámláló timer ──────────────────────────────────────────────────────
+let timerInterval = null;
+
+function startTimer(duration) {
+  stopTimer();
+  const el = document.getElementById('timerDisplay');
+  let remaining = duration;
+
+  function tick() {
+    if (remaining <= 0) {
+      el.textContent = '⏰ 0s';
+      el.style.color = 'var(--danger)';
+      stopTimer();
+      return;
+    }
+    el.textContent = `⏱ ${remaining}s`;
+    // Szín: zöld → sárga → piros
+    if (remaining > 15) {
+      el.style.color = 'var(--accent)';
+    } else if (remaining > 7) {
+      el.style.color = '#ffd700';
+    } else {
+      el.style.color = 'var(--danger)';
+    }
+    remaining--;
+  }
+
+  tick(); // azonnal frissít
+  timerInterval = setInterval(tick, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  const el = document.getElementById('timerDisplay');
+  if (el) el.textContent = '';
 }
