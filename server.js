@@ -394,9 +394,6 @@ function startRound(room) {
 
   const imageUrl = imageCache.get(randomGame.slug) || null;
   const totalHints = randomGame.hints.length;
-  const blurLevels = Array.from({ length: totalHints }, (_, i) =>
-    Math.max(0, Math.round(24 - (24 / (totalHints - 1 || 1)) * i))
-  );
 
   io.to(room.id).emit('round_start', {
     round: room.round,
@@ -405,8 +402,7 @@ function startRound(room) {
     hintIndex: 0,
     totalHints,
     imageUrl,
-    blurPx: blurLevels[0],
-    duration: room.roundDuration,    // ← frontend tudja meddig tart
+    duration: room.roundDuration,
   });
 
   // Hint időzítő (8 mp-enként új hint)
@@ -417,7 +413,6 @@ function startRound(room) {
       io.to(room.id).emit('new_hint', {
         hint: randomGame.hints[hintIdx],
         hintIndex: hintIdx,
-        blurPx: blurLevels[hintIdx] ?? 0,
       });
       hintIdx++;
     } else {

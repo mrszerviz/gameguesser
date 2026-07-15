@@ -134,7 +134,7 @@ function initSocket() {
     addChatSystem('🎮 A játék elkezdődött!');
   });
 
-  state.socket.on('round_start', ({ round, maxRounds, hint, hintIndex, totalHints, imageUrl, blurPx, duration }) => {
+  state.socket.on('round_start', ({ round, maxRounds, hint, hintIndex, totalHints, imageUrl, duration }) => {
     state.currentRound = round;
     state.guessedThisRound = false;
     clearHints();
@@ -143,14 +143,14 @@ function initSocket() {
     document.getElementById('guessInput').value = '';
     setFeedback('', '');
     addHint(hint, hintIndex, totalHints);
-    setGameImage(imageUrl, blurPx);
-    addChatSystem(`🎯 ${round}. kör kezdődik!`);
+    setGameImage(imageUrl, 24);   // teljes blur-rel indul
     startTimer(duration);
+    startBlurTimer(duration);     // időalapú blur csökkentés
+    addChatSystem(`🎯 ${round}. kör kezdődik!`);
   });
 
-  state.socket.on('new_hint', ({ hint, hintIndex, blurPx }) => {
+  state.socket.on('new_hint', ({ hint, hintIndex }) => {
     addHint(hint, hintIndex);
-    updateImageBlur(blurPx);
   });
 
   state.socket.on('correct_guess', ({ playerId, username, points, answer, room }) => {
@@ -160,6 +160,11 @@ function initSocket() {
       document.getElementById('guessInput').disabled = true;
       setFeedback(`🎉 Helyes! +${points} pont`, 'correct');
       stopTimer();
+    }
+    // Ha mindenki kitalálta, a kép élesre vált
+    if (room.players.every(p => p.score > 0 || playerId === p.id)) {
+      updateImageBlur(0);
+      stopBlurTimer();
     }
     updateScoreboard(room.players);
     addChatSystem(`✅ ${username} kitalálta! (+${points} pont)`);
@@ -180,6 +185,7 @@ function initSocket() {
   state.socket.on('round_timeout', ({ answer, room }) => {
     document.getElementById('guessInput').disabled = true;
     stopTimer();
+    updateImageBlur(0);   // kör végén teljesen éles lesz
     setFeedback(`⏰ Idő lejárt! A válasz: ${answer}`, 'info');
     updateScoreboard(room.players);
     addChatSystem(`⏰ A helyes válasz: ${answer}`);
@@ -486,6 +492,7 @@ function updateImageBlur(blurPx) {
 
 // ── Visszaszámláló timer ──────────────────────────────────────────────────────
 let timerInterval = null;
+let blurInterval  = null;
 
 function startTimer(duration) {
   stopTimer();
@@ -500,7 +507,6 @@ function startTimer(duration) {
       return;
     }
     el.textContent = `⏱ ${remaining}s`;
-    // Szín: zöld → sárga → piros
     if (remaining > 15) {
       el.style.color = 'var(--accent)';
     } else if (remaining > 7) {
@@ -511,8 +517,31 @@ function startTimer(duration) {
     remaining--;
   }
 
-  tick(); // azonnal frissít
+  tick();
   timerInterval = setInterval(tick, 1000);
+}
+
+function startBlurTimer(duration) {
+  stopBlurTimer();
+  const maxBlur = 24;   // px – teljes blur induláskor
+  const minBlur = 0;
+  let elapsed = 0;
+
+  blurInterval = setInterval(() => {
+    elapsed++;
+    // Lineárisan csökken: 24px → 0px a teljes duration alatt
+    const ratio = Math.min(elapsed / duration, 1);
+    const blur = Math.round(maxBlur - ratio * (maxBlur - minBlur));
+    updateImageBlur(blur);
+    if (elapsed >= duration) stopBlurTimer();
+  }, 1000);
+}
+
+function stopBlurTimer() {
+  if (blurInterval) {
+    clearInterval(blurInterval);
+    blurInterval = null;
+  }
 }
 
 function stopTimer() {
@@ -520,6 +549,7 @@ function stopTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+  stopBlurTimer();
   const el = document.getElementById('timerDisplay');
   if (el) el.textContent = '';
 }
