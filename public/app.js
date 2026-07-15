@@ -523,17 +523,16 @@ function startTimer(duration) {
 
 function startBlurTimer(duration) {
   stopBlurTimer();
-  const maxBlur = 24;   // px – teljes blur induláskor
-  const minBlur = 0;
+  const maxBlur  = 24;          // px induláskor
+  const clearAt  = duration / 2; // 30mp-ből 15mp alatt teljesen éles
   let elapsed = 0;
 
   blurInterval = setInterval(() => {
     elapsed++;
-    // Lineárisan csökken: 24px → 0px a teljes duration alatt
-    const ratio = Math.min(elapsed / duration, 1);
-    const blur = Math.round(maxBlur - ratio * (maxBlur - minBlur));
+    const ratio = Math.min(elapsed / clearAt, 1);  // 0→1 az első 15mp alatt
+    const blur  = Math.round(maxBlur - ratio * maxBlur);
     updateImageBlur(blur);
-    if (elapsed >= duration) stopBlurTimer();
+    if (elapsed >= clearAt) stopBlurTimer(); // 15mp után leáll, kép éles marad
   }, 1000);
 }
 
